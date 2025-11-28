@@ -7,7 +7,7 @@
  * - Hybrid memory (combines both)
  */
 
-import type { Message, UUID } from '@framework/core/types';
+import type { Message } from '@framework/core/types';
 import { generateId } from '@framework/core/utils';
 import { createLogger } from '@framework/config/logger';
 

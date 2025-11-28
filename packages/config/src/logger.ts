@@ -362,8 +362,6 @@ function createLogFn(
 // EXPORTS
 // =============================================================================
 
-export { Logger };
-
 let _defaultLogger: Logger | null = null;
 
 export function getDefaultLogger(): Logger {

@@ -8,7 +8,7 @@
 import { ToolDefinition } from '@framework/core';
 import { createLogger } from '@framework/config';
 import { readFileSync, readdirSync, existsSync } from 'fs';
-import { join, basename } from 'path';
+import { join } from 'path';
 import { parse as parseYaml } from 'yaml';
 
 const logger = createLogger('skills');
@@ -48,7 +48,6 @@ export interface Skill extends SkillMetadata {
 
 class SkillRegistry {
   private skills = new Map<string, Skill>();
-  private loaded = false;
   
   /**
    * Load all skills from the skills directory
@@ -80,8 +79,7 @@ class SkillRegistry {
         }
       }
     }
-    
-    this.loaded = true;
+
     logger.info({ count: this.skills.size }, 'Skills loaded');
   }
   

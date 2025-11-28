@@ -20,7 +20,8 @@
     "@framework/core": "workspace:*",
     "@framework/config": "workspace:*",
     "openai": "^4.20.0",
-    "@anthropic-ai/sdk": "^0.10.0"
+    "@anthropic-ai/sdk": "^0.10.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
