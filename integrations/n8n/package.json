@@ -1,0 +1,19 @@
+{
+  "name": "@framework/integrations-n8n",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@framework/core": "workspace:*",
+    "@framework/config": "workspace:*",
+    "@framework/ai": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

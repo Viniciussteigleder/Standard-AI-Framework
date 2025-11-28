@@ -1,0 +1,239 @@
+# =============================================================================
+# Docker Compose - AI Framework Development Stack
+# =============================================================================
+# 
+# Usage:
+#   pnpm docker:up                    - Start infrastructure (postgres, redis)
+#   pnpm docker:up --profile tools    - Include dev tools (adminer, n8n)
+#   pnpm docker:up --profile full     - Include all services
+#   pnpm docker:down                  - Stop all services
+#   pnpm docker:logs                  - View logs
+#
+# Profiles:
+#   - (default): postgres, redis - minimum required
+#   - tools: adminer, redis-commander, n8n - development tools
+#   - full: api, agent, web, python - all application services
+#   - monitoring: prometheus, grafana - observability
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Infrastructure (Always Started)
+  # ===========================================================================
+  
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-framework-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_framework}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_framework"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ai-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-framework-redis
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai-network
+
+  # ===========================================================================
+  # Application Services (Profile: full)
+  # ===========================================================================
+
+  python:
+    build:
+      context: ../../templates/service-python
+      dockerfile: Dockerfile
+    container_name: ai-framework-python
+    restart: unless-stopped
+    environment:
+      DEBUG: "true"
+      PORT: 4003
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_framework
+      REDIS_URL: redis://redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      API_SERVICE_URL: http://api:4000
+      AGENT_SERVICE_URL: http://agent:4001
+    ports:
+      - "4003:4003"
+    volumes:
+      - ../../templates/service-python/src:/app/src:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-network
+    profiles:
+      - full
+
+  # ===========================================================================
+  # Development Tools (Profile: tools)
+  # ===========================================================================
+
+  adminer:
+    image: adminer:latest
+    container_name: ai-framework-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: nette
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - ai-network
+    profiles:
+      - tools
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: ai-framework-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - ai-network
+    profiles:
+      - tools
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ai-framework-n8n
+    restart: unless-stopped
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-admin}
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678
+      GENERIC_TIMEZONE: ${TIMEZONE:-Europe/Berlin}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: postgres
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ai-network
+    profiles:
+      - tools
+
+  # ===========================================================================
+  # Monitoring (Profile: monitoring)
+  # ===========================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: ai-framework-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: ai-framework-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3001
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  ai-network:
+    driver: bridge
+    name: ai-framework-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  postgres_data:
+    name: ai-framework-postgres-data
+  redis_data:
+    name: ai-framework-redis-data
+  n8n_data:
+    name: ai-framework-n8n-data
+  prometheus_data:
+    name: ai-framework-prometheus-data
+  grafana_data:
+    name: ai-framework-grafana-data

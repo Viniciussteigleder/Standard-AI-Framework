@@ -1,0 +1,98 @@
+{
+  "name": "@vinicius/ai-framework",
+  "version": "0.1.0",
+  "description": "Modular AI Development Framework - Standard base for all AI projects",
+  "author": "Vinicius Steigleder",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Viniciussteigleder/Standard-AI-Framework.git"
+  },
+  "bin": {
+    "ai-framework": "./bin/ai-framework.js",
+    "create-ai-project": "./bin/ai-framework.js"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=@framework/api",
+    "dev:agent": "turbo run dev --filter=@framework/agent",
+    "dev:web": "turbo run dev --filter=@framework/web",
+    "dev:python": "cd templates/service-python && uvicorn src.main:app --reload --port 4003",
+    "build": "turbo run build",
+    "test": "vitest",
+    "test:unit": "vitest run --dir tests/unit",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest watch",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules coverage .turbo",
+    "create:service": "node scripts/create-service.js",
+    "create:project": "node bin/ai-framework.js create",
+    "secrets:setup": "node bin/ai-framework.js secrets:setup",
+    "secrets:sync": "node bin/ai-framework.js secrets:sync",
+    "add:service": "node bin/ai-framework.js add:service",
+    "add:integration": "node bin/ai-framework.js add:integration",
+    "db:generate": "pnpm --filter @framework/database db:generate",
+    "db:push": "pnpm --filter @framework/database db:push",
+    "db:migrate": "pnpm --filter @framework/database db:migrate",
+    "db:migrate:prod": "pnpm --filter @framework/database db:migrate:prod",
+    "db:seed": "pnpm --filter @framework/database db:seed",
+    "db:studio": "pnpm --filter @framework/database db:studio",
+    "db:reset": "pnpm --filter @framework/database db:reset",
+    "docker:up": "docker-compose -f infra/docker/docker-compose.yml up -d",
+    "docker:up:tools": "docker-compose -f infra/docker/docker-compose.yml --profile tools up -d",
+    "docker:up:full": "docker-compose -f infra/docker/docker-compose.yml --profile full up -d",
+    "docker:up:all": "docker-compose -f infra/docker/docker-compose.yml --profile tools --profile full up -d",
+    "docker:down": "docker-compose -f infra/docker/docker-compose.yml --profile tools --profile full down",
+    "docker:logs": "docker-compose -f infra/docker/docker-compose.yml logs -f",
+    "docker:reset": "docker-compose -f infra/docker/docker-compose.yml --profile tools --profile full down -v && docker-compose -f infra/docker/docker-compose.yml up -d",
+    "docker:python": "docker-compose -f infra/docker/docker-compose.yml --profile full up -d python",
+    "n8n:local": "docker-compose -f infra/docker/docker-compose.yml --profile tools up -d n8n",
+    "monitoring:up": "docker-compose -f infra/docker/docker-compose.yml --profile monitoring up -d",
+    "postinstall": "pnpm db:generate || true",
+    "prepare": "husky install || true"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "eslint": "^8.55.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "playwright": "^1.41.0",
+    "prettier": "^3.1.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "yaml": "^2.3.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ],
+    "*.py": [
+      "ruff check --fix",
+      "ruff format"
+    ]
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "integrations/*"
+  ]
+}
