@@ -22,10 +22,10 @@ import type {
   AgentConfig,
   ModelConfig,
 } from '@framework/core/types';
-import { MaxIterationsError, AgentError, ToolExecutionError } from '@framework/core/errors';
+import { MaxIterationsError } from '@framework/core/errors';
 import { generateId, now } from '@framework/core/utils';
 import { createLogger, logAICompletion, logToolCall } from '@framework/config/logger';
-import { createAIClient, AIClient, AIMessage, AIResponse } from './providers';
+import { createAIClient, AIClient, AIMessage } from './providers';
 
 const logger = createLogger('agent');
 
